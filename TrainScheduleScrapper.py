@@ -103,9 +103,9 @@ def fetchSchedules(start,end) :
         elapsed = int((currentTime - startTime).total_seconds() / 60)
         
         if(elapsed > elapsedBefore) :
-            percentComplete = int(( t - start) * 100 / (end - start))
+            percentComplete = round(( t - start) * 100 / (end - start),1)
             print(f'Train {t} done. {percentComplete}%     Elapsed : {elapsed} mins.')
-            elapsed = elapsedBefore
+            elapsedBefore = elapsed 
             
             f.flush()
 
