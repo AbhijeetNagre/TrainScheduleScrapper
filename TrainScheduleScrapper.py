@@ -11,23 +11,45 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 url = 'https://www.irctc.co.in/eticketing/protected/mapps1/trnscheduleenquiry/'
     
-headrs = {'Referer': 'https://www.irctc.co.in/nget/booking/train-list' , 
-                  'Sec-Fetch-Site': 'same-origin',
-                  'Connection': 'keep-alive',
-                  'Sec-Fetch-Mode': 'cors',
-                  'DNT': '1',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36',
-    'greq': '1570176943805',
-    'Content-Language': 'en',
-    'Accept': 'application/json, text/plain, */*',
-    'Content-Type': 'application/x-www-form-urlencoded',
-    'Sec-Fetch-Site': 'same-origin',
-    'Referer': 'https://www.irctc.co.in/nget/booking/train-list',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Accept-Language': 'en-US,en;q=0.9,mr;q=0.8,hi;q=0.7'}
+headrs = {
+    "Host": "www.irctc.co.in",
+    "Connection": "keep-alive",
+    "greq": "1740131289744",
+    "sec-ch-ua-platform": "\"Windows\"",
+    "bmirak": "webbm",
+    "Accept-Language": "en-US,en;q=0.0",
+    "sec-ch-ua": "\"Not A(Brand\";v=\"8\", \"Chromium\";v=\"132\", \"Google Chrome\";v=\"132\"",
+    "bmiyek": "E984274AF71D3FA1AB85FC66A0BC8D90",
+    "sec-ch-ua-mobile": "?0",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36",
+    "Accept": "application/json, text/plain, */*",
+    "DNT": "1",
+    "Content-Language": "en",
+    "Content-Type": "application/x-www-form-urlencoded",
+    "Sec-Fetch-Site": "same-origin",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Dest": "empty",
+    "Referer": "https://www.irctc.co.in/nget/booking/check-train-schedule",
+    "Accept-Encoding": "gzip, deflate, br, zstd"
+}
     
 
-cooky = {'_ga' :  'GA1.3.945583488.1570170656' , '_gid' :  'GA1.3.1894108909.1570170656' , '__gads' :  'ID=2cf276bd7ee49021:T=1570170661:S=ALNI_MaDXoeOY_7iBqY9sz6PAVyQPaCMzg' , 'et_app' :  '40daa3d667a2540eb029ab1136edff520ed293aa1e98ecf225e1c85029f22579ebba9d1a' , 'JSESSIONID' :  '4uibdzT9uYsjdVuExU6QGLZueAC1phHtxkbHOVT8bhQynR5VM-Z-!-55696307'}
+cooky = {
+    "et_appVIP1": "771902986.16671.0000",
+    "_ga_SHTZYKNHG2": "GS1.1.1740131290.1.0.1740131290.0.0.0",
+    "_gid": "GA1.3.2047262707.1740131290",
+    "_ga": "GA1.1.1641348256.1740131290",
+    "_ga_JSTMKS9Y3J": "GS1.1.1740131291.1.0.1740131291.0.0.0",
+    "_ga_NFN218243Z": "GS1.1.1740131290.1.1.1740131314.0.0.0",
+    "_ga_7K0RMWL72E": "GS1.1.1740131290.1.1.1740131314.0.0.0",
+    "_ga_8J9SC9WB3T": "GS1.1.1740131290.1.1.1740131314.36.0.0",
+    "_ga_HXEC5QES15": "GS1.1.1740131291.1.1.1740131314.0.0.0",
+    "ngetAppId": "MBMn8lOjMZVhILNoDdzAD7gCj069GC_HynHSqcxlQ0tiRQQJ7igq!-822774871",
+    "__gads": "ID=bb875e629d12d9d6:T=1727788888:RT=1740133762:S=ALNI_Ma0kdawu4C94aH5zGPheKhvbArpMg",
+    "__gpi": "UID=00000f2dc154f158:T=1727788888:RT=1740133762:S=ALNI_MYYzdonH37wOVgxOhWVN0rjvs7J6g",
+    "__eoi": "ID=8a75c8728a310d38:T=1727788888:RT=1740133762:S=AA-AfjaXoL4ukaJwZhUOLRtvvRJA",
+    "TS018d84e5": "01d83d9ce731cb0b2ab808c4dc48b084daa50f5a9ff2a8a29afe44c89c848ad7c134a1412b231259cad118e8005c99de5ab4e419ba"
+}
 
 
 def getFilePath() :
@@ -57,18 +79,57 @@ def saveScheduleToFile(scheduleJson, file,trainNumber, saveHeaders) :
     
     if(saveHeaders) :
         keys = list(scheduleJson['stationList'][0].keys())
-        keys = ['Train Number', 'Serial number'] + keys   # prepend trainNumber
+        keys = ['Train Number', 'Train Name', 'Serial number'] + keys + [
+            'Schedule', 'From', 'To', 'Train Owner','Duration',
+            'RunsOnMon', 'RunsOnTue', 'RunsOnWed', 'RunsOnThu', 'RunsOnFri', 'RunsOnSat', 'RunsOnSun'
+        ]
     
         s = ','.join(keys)
         file.write(s + '\n')        
         
     for idx, st in enumerate(scheduleJson['stationList']) :     
         vals = list(st.values())
-        vals = [str(trainNumber), str(idx)] + vals   # prepend trainNumber
-        
-        s = ','.join(vals)        
+        vals = [str(trainNumber), scheduleJson['trainName'], str(idx)] + vals + [
+            getTrainSchedule(scheduleJson, idx),  
+            scheduleJson['stationFrom'], 
+            scheduleJson['stationTo'],
+            scheduleJson['trainOwner'], 
+            scheduleJson['duration'],
+            scheduleJson['trainRunsOnMon'], 
+            scheduleJson['trainRunsOnTue'], 
+            scheduleJson['trainRunsOnWed'], 
+            scheduleJson['trainRunsOnThu'], 
+            scheduleJson['trainRunsOnFri'], 
+            scheduleJson['trainRunsOnSat'],
+            scheduleJson['trainRunsOnSun']
+        ]
+
+        s = ','.join(vals)
         file.write(s + '\n')
-        
+
+def getTrainSchedule(scheduleJson, serialNumber) :
+
+    if(serialNumber != 0) :
+        return ''
+    
+    scheduleAsString = ''
+    if(scheduleJson['trainRunsOnMon'] == 'Y') :
+        scheduleAsString += ' MON '
+    if(scheduleJson['trainRunsOnTue'] == 'Y') :
+        scheduleAsString += ' TUE '
+    if(scheduleJson['trainRunsOnWed'] == 'Y') :
+        scheduleAsString += ' WED '
+    if(scheduleJson['trainRunsOnThu'] == 'Y') :
+        scheduleAsString += ' THU '
+    if(scheduleJson['trainRunsOnFri'] == 'Y') :
+        scheduleAsString += ' FRI '
+    if(scheduleJson['trainRunsOnSat'] == 'Y') :
+        scheduleAsString += ' SAT '
+    if(scheduleJson['trainRunsOnSun'] == 'Y') :
+        scheduleAsString += ' SUN'
+
+    return scheduleAsString     
+
 def getInputs() :
     start = input('Enter start range (Default is 11000) : ')
     end = input("Enter end range (Default is 26200) : ")
