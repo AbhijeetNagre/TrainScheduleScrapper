@@ -1,16 +1,17 @@
-
 # -*- coding: utf-8 -*-
-import requests as r
+import argparse
 import json
 import os
+import sys
 from datetime import datetime
 
+import requests as r
 import urllib3
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 url = 'https://www.irctc.co.in/eticketing/protected/mapps1/trnscheduleenquiry/'
-    
+
 headrs = {
     "Host": "www.irctc.co.in",
     "Connection": "keep-alive",
@@ -32,7 +33,7 @@ headrs = {
     "Referer": "https://www.irctc.co.in/nget/booking/check-train-schedule",
     "Accept-Encoding": "gzip, deflate, br, zstd"
 }
-    
+
 
 cooky = {
     "et_appVIP1": "771902986.16671.0000",
@@ -52,127 +53,179 @@ cooky = {
 }
 
 
-def getFilePath() :
-    
+def writeStatus(statusStream, message):
+    if statusStream is None:
+        return
+
+    print(message, file=statusStream)
+
+    if hasattr(statusStream, 'flush'):
+        statusStream.flush()
+
+
+def getFilePath():
     dirpath = os.getcwd()
-
     now = datetime.now()
-
-    filename = filename = f'TrainSchedule_{now.year}{now.month:02}{now.day:02}_{now.hour:02}{now.minute:02}.csv'
+    filename = f'TrainSchedule_{now.year}{now.month:02}{now.day:02}_{now.hour:02}{now.minute:02}.csv'
     filepath = os.path.join(dirpath, filename)
-    
+
     return filepath
 
 
 def getTrainScheduleJson(trainNumber):
-    
     trainUrl = url + str(trainNumber)
-    
-    t = r.get(trainUrl, verify=False, headers= headrs, cookies=cooky)
-    
+    t = r.get(trainUrl, verify=False, headers=headrs, cookies=cooky)
     schedule = json.loads(t.text)
-    
-    return schedule
-   
 
-def saveScheduleToFile(scheduleJson, file,trainNumber, saveHeaders) :
-    
-    if(saveHeaders) :
+    return schedule
+
+
+def isValidSchedule(scheduleJson):
+    return bool(scheduleJson.get('stationList'))
+
+
+def saveScheduleToFile(scheduleJson, file, trainNumber, saveHeaders):
+    if saveHeaders:
         keys = list(scheduleJson['stationList'][0].keys())
         keys = ['Train Number', 'Train Name', 'Serial number'] + keys + [
-            'Schedule', 'From', 'To', 'Train Owner','Duration',
+            'Schedule', 'From', 'To', 'Train Owner', 'Duration',
             'RunsOnMon', 'RunsOnTue', 'RunsOnWed', 'RunsOnThu', 'RunsOnFri', 'RunsOnSat', 'RunsOnSun'
         ]
-    
+
         s = ','.join(keys)
-        file.write(s + '\n')        
-        
-    for idx, st in enumerate(scheduleJson['stationList']) :     
+        file.write(s + '\n')
+
+    for idx, st in enumerate(scheduleJson['stationList']):
         vals = list(st.values())
         vals = [str(trainNumber), scheduleJson['trainName'], str(idx)] + vals + [
-            getTrainSchedule(scheduleJson, idx),  
-            scheduleJson['stationFrom'], 
+            getTrainSchedule(scheduleJson, idx),
+            scheduleJson['stationFrom'],
             scheduleJson['stationTo'],
-            scheduleJson['trainOwner'], 
+            scheduleJson['trainOwner'],
             scheduleJson['duration'],
-            scheduleJson['trainRunsOnMon'], 
-            scheduleJson['trainRunsOnTue'], 
-            scheduleJson['trainRunsOnWed'], 
-            scheduleJson['trainRunsOnThu'], 
-            scheduleJson['trainRunsOnFri'], 
+            scheduleJson['trainRunsOnMon'],
+            scheduleJson['trainRunsOnTue'],
+            scheduleJson['trainRunsOnWed'],
+            scheduleJson['trainRunsOnThu'],
+            scheduleJson['trainRunsOnFri'],
             scheduleJson['trainRunsOnSat'],
             scheduleJson['trainRunsOnSun']
         ]
 
-        s = ','.join(vals)
+        s = ','.join(str(val) for val in vals)
         file.write(s + '\n')
 
-def getTrainSchedule(scheduleJson, serialNumber) :
 
-    if(serialNumber != 0) :
+def getTrainSchedule(scheduleJson, serialNumber):
+    if serialNumber != 0:
         return ''
-    
+
     scheduleAsString = ''
-    if(scheduleJson['trainRunsOnMon'] == 'Y') :
+    if scheduleJson['trainRunsOnMon'] == 'Y':
         scheduleAsString += ' MON '
-    if(scheduleJson['trainRunsOnTue'] == 'Y') :
+    if scheduleJson['trainRunsOnTue'] == 'Y':
         scheduleAsString += ' TUE '
-    if(scheduleJson['trainRunsOnWed'] == 'Y') :
+    if scheduleJson['trainRunsOnWed'] == 'Y':
         scheduleAsString += ' WED '
-    if(scheduleJson['trainRunsOnThu'] == 'Y') :
+    if scheduleJson['trainRunsOnThu'] == 'Y':
         scheduleAsString += ' THU '
-    if(scheduleJson['trainRunsOnFri'] == 'Y') :
+    if scheduleJson['trainRunsOnFri'] == 'Y':
         scheduleAsString += ' FRI '
-    if(scheduleJson['trainRunsOnSat'] == 'Y') :
+    if scheduleJson['trainRunsOnSat'] == 'Y':
         scheduleAsString += ' SAT '
-    if(scheduleJson['trainRunsOnSun'] == 'Y') :
+    if scheduleJson['trainRunsOnSun'] == 'Y':
         scheduleAsString += ' SUN'
 
-    return scheduleAsString     
+    return scheduleAsString
 
-def getInputs() :
-    start = input('Enter start range (Default is 11000) : ')
-    end = input("Enter end range (Default is 26200) : ")
 
-    start = int(11000 if bool(start.strip()) == False else start)
-    end = int(26200 if bool(end.strip()) == False else end)
-    
-    print(start)
-    print(end)
-    
-    return start,end
+def parseArgs(argv=None):
+    parser = argparse.ArgumentParser(description='Download train schedule data for a train range.')
+    parser.add_argument('--start', type=int, help='Train number to start from')
+    parser.add_argument('--end', type=int, help='Train number to end at')
+    return parser.parse_args(argv)
 
-def fetchSchedules(start,end) :
-    
+
+def getInputs(start=None, end=None, inputFunc=input):
+    if start is None:
+        start = inputFunc('Enter start range (Default is 11000) : ')
+        start = int(11000 if bool(start.strip()) is False else start)
+
+    if end is None:
+        end = inputFunc('Enter end range (Default is 26200) : ')
+        end = int(26200 if bool(end.strip()) is False else end)
+
+    return start, end
+
+
+def fetchSchedules(start, end, file, statusStream=None, fetchScheduleFunc=None):
     firstTrain = True
-    
-    elapsedBefore = 0    
+    elapsedBefore = 0
     startTime = datetime.now()
-    
-    for t in range(start,end + 1) :
-        
-        #print(f'Fetching schedule for Train {t}.')
-        
-        scheduleJson = getTrainScheduleJson(t)        
-        
-        if('stationList' in scheduleJson) :
-            #print(f'Saving schedule for Train {t}.')
-            saveScheduleToFile(scheduleJson,f,t, firstTrain) 
+    fetchScheduleFunc = getTrainScheduleJson if fetchScheduleFunc is None else fetchScheduleFunc
+
+    validTrains = []
+    invalidTrains = []
+
+    writeStatus(statusStream, f'Processing trains from {start} to {end}.')
+
+    for trainNumber in range(start, end + 1):
+        scheduleJson = fetchScheduleFunc(trainNumber)
+
+        if isValidSchedule(scheduleJson):
+            saveScheduleToFile(scheduleJson, file, trainNumber, firstTrain)
             firstTrain = False
-            
+            validTrains.append(trainNumber)
+            writeStatus(statusStream, f'Train {trainNumber} valid.')
+        else:
+            invalidTrains.append(trainNumber)
+            writeStatus(statusStream, f'Train {trainNumber} invalid.')
+
         currentTime = datetime.now()
         elapsed = int((currentTime - startTime).total_seconds() / 60)
-        
-        if(elapsed > elapsedBefore) :
-            percentComplete = round(( t - start) * 100 / (end - start),1)
-            print(f'Train {t} done. {percentComplete}%     Elapsed : {elapsed} mins.')
-            elapsedBefore = elapsed 
-            
-            f.flush()
 
-start,end = getInputs()
+        if elapsed > elapsedBefore:
+            percentComplete = round((trainNumber - start) * 100 / (end - start), 1) if end != start else 100.0
+            writeStatus(statusStream, f'Train {trainNumber} done. {percentComplete}%     Elapsed : {elapsed} mins.')
+            elapsedBefore = elapsed
 
-filepath = getFilePath()
-with open(filepath, "w+") as f :
-    
-    fetchSchedules(start,end) 
+            if hasattr(file, 'flush'):
+                file.flush()
+
+    writeStatus(
+        statusStream,
+        f'Completed. Valid trains: {len(validTrains)}. Invalid trains: {len(invalidTrains)}.'
+    )
+
+    return {
+        'start': start,
+        'end': end,
+        'validTrains': validTrains,
+        'invalidTrains': invalidTrains
+    }
+
+
+def runScrapper(start, end, outputFile=None, statusStream=None, fetchScheduleFunc=None):
+    if outputFile is not None:
+        result = fetchSchedules(start, end, outputFile, statusStream, fetchScheduleFunc)
+        result['outputPath'] = None
+        return result
+
+    filepath = getFilePath()
+    with open(filepath, "w+") as file:
+        result = fetchSchedules(start, end, file, statusStream, fetchScheduleFunc)
+
+    result['outputPath'] = filepath
+    writeStatus(statusStream, f'Output file: {filepath}')
+
+    return result
+
+
+def main(argv=None, outputFile=None, statusStream=None, fetchScheduleFunc=None, inputFunc=input):
+    args = parseArgs(argv)
+    start, end = getInputs(args.start, args.end, inputFunc)
+    return runScrapper(start, end, outputFile, statusStream, fetchScheduleFunc)
+
+
+if __name__ == '__main__':
+    main(statusStream=sys.stdout)
