@@ -142,8 +142,16 @@ def getInputs():
     start = input('Enter start range (Default is 11000) : ')
     end = input("Enter end range (Default is 26200) : ")
 
-    start = int(11000 if bool(start.strip()) is False else start)
-    end = int(26200 if bool(end.strip()) is False else end)
+    try:
+        start = int(11000 if not start.strip() else start)
+        end = int(26200 if not end.strip() else end)
+    except ValueError:
+        print('Start and end ranges must be whole numbers.')
+        return None, None
+
+    if start > end:
+        print('Start range cannot be greater than end range.')
+        return None, None
 
     print(start)
     print(end)
@@ -154,6 +162,7 @@ def getInputs():
 def fetchSchedules(session, writer, start, end):
     firstTrain = True
     savedTrainCount = 0
+    skippedTrainCount = 0
     failures = []
 
     elapsedBefore = 0
@@ -172,6 +181,9 @@ def fetchSchedules(session, writer, start, end):
             saveScheduleToFile(scheduleJson, writer, trainNumber, firstTrain)
             firstTrain = False
             savedTrainCount += 1
+        elif 'stationList' in scheduleJson:
+            skippedTrainCount += 1
+            print(f'Train {trainNumber} returned an empty station list and was skipped.')
 
         currentTime = datetime.now()
         elapsed = int((currentTime - startTime).total_seconds() / 60)
@@ -181,11 +193,14 @@ def fetchSchedules(session, writer, start, end):
             print(f'Train {trainNumber} done. {percentComplete}%     Elapsed : {elapsed} mins.')
             elapsedBefore = elapsed
 
-    return savedTrainCount, failures
+    return savedTrainCount, skippedTrainCount, failures
 
 
 def main():
     start, end = getInputs()
+    if start is None or end is None:
+        return 1
+
     filepath = getFilePath()
 
     try:
@@ -196,7 +211,7 @@ def main():
 
     with open(filepath, "w+", newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
-        savedTrainCount, failures = fetchSchedules(session, writer, start, end)
+        savedTrainCount, skippedTrainCount, failures = fetchSchedules(session, writer, start, end)
 
     if savedTrainCount == 0:
         os.remove(filepath)
@@ -206,6 +221,9 @@ def main():
 
     if failures:
         print(f'Failed to fetch {len(failures)} train numbers.')
+
+    if skippedTrainCount:
+        print(f'Skipped {skippedTrainCount} train numbers with empty station lists.')
 
     return 0
 
