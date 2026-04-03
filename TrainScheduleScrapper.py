@@ -176,13 +176,13 @@ def fetchSchedules(session, writer, start, end):
 
         stationList = scheduleJson.get('stationList')
 
-        if stationList:
+        if stationList == []:
+            skippedTrainCount += 1
+            print(f'Train {trainNumber} returned an empty station list and was skipped.')
+        elif stationList:
             saveScheduleToFile(scheduleJson, writer, trainNumber, firstTrain)
             firstTrain = False
             savedTrainCount += 1
-        elif stationList == []:
-            skippedTrainCount += 1
-            print(f'Train {trainNumber} returned an empty station list and was skipped.')
 
         currentTime = datetime.now()
         elapsed = int((currentTime - startTime).total_seconds() / 60)
@@ -198,6 +198,7 @@ def fetchSchedules(session, writer, start, end):
 def main():
     start, end = getInputs()
     if start is None or end is None:
+        print('Exiting without downloading schedules.')
         return 1
 
     filepath = getFilePath()
@@ -212,10 +213,11 @@ def main():
         with open(filepath, "w", newline='', encoding='utf-8') as file:
             writer = csv.writer(file)
             savedTrainCount, skippedTrainCount, failures = fetchSchedules(session, writer, start, end)
-    except (OSError, ValueError):
+    except (OSError, ValueError) as exc:
         if os.path.exists(filepath):
             os.remove(filepath)
-        raise
+        print(f'Unable to save train schedules: {exc}')
+        return 1
 
     if savedTrainCount == 0:
         os.remove(filepath)
