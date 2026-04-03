@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import argparse
 import json
 import os
@@ -205,7 +204,7 @@ def fetchSchedules(start, end, file, statusStream=None, fetchScheduleFunc=None):
     }
 
 
-def runScrapper(start, end, outputFile=None, statusStream=None, fetchScheduleFunc=None):
+def runScraper(start, end, outputFile=None, statusStream=None, fetchScheduleFunc=None):
     if outputFile is not None:
         result = fetchSchedules(start, end, outputFile, statusStream, fetchScheduleFunc)
         result['outputPath'] = None
@@ -224,7 +223,7 @@ def runScrapper(start, end, outputFile=None, statusStream=None, fetchScheduleFun
 def main(argv=None, outputFile=None, statusStream=None, fetchScheduleFunc=None, inputFunc=input):
     args = parseArgs(argv)
     start, end = getInputs(args.start, args.end, inputFunc)
-    return runScrapper(start, end, outputFile, statusStream, fetchScheduleFunc)
+    return runScraper(start, end, outputFile, statusStream, fetchScheduleFunc)
 
 
 if __name__ == '__main__':
