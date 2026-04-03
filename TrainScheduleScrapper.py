@@ -82,9 +82,7 @@ def getTrainScheduleJson(session, trainNumber):
 
 
 def saveScheduleToFile(scheduleJson, writer, trainNumber, saveHeaders):
-    stationList = scheduleJson.get('stationList', [])
-    if not stationList:
-        return
+    stationList = scheduleJson['stationList']
 
     if saveHeaders:
         keys = list(stationList[0].keys())
@@ -167,7 +165,7 @@ def fetchSchedules(session, writer, start, end):
 
     elapsedBefore = 0
     startTime = datetime.now()
-    totalRange = max(end - start, 1)
+    totalRange = max(end - start + 1, 1)
 
     for trainNumber in range(start, end + 1):
         try:
