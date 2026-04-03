@@ -149,11 +149,11 @@ def parseArgs(argv=None):
 def getInputs(start=None, end=None, inputFunc=input):
     if start is None:
         start = inputFunc('Enter start range (Default is 11000) : ')
-        start = int(11000 if bool(start.strip()) is False else start)
+        start = int(11000 if not start.strip() else start)
 
     if end is None:
         end = inputFunc('Enter end range (Default is 26200) : ')
-        end = int(26200 if bool(end.strip()) is False else end)
+        end = int(26200 if not end.strip() else end)
 
     return start, end
 
