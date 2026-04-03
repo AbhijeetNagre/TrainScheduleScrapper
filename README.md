@@ -23,3 +23,19 @@ Run:
 ```bash
 python -m unittest discover -s tests
 ```
+
+## Publish
+
+Generate a Windows executable from the project root with:
+
+```powershell
+.venv\Scripts\python.exe -m PyInstaller --onefile TrainScheduleScrapper.py
+```
+
+If `PyInstaller` is not installed yet, install it first:
+
+```powershell
+.venv\Scripts\python.exe -m pip install pyinstaller
+```
+
+The generated executable will be created at `dist\TrainScheduleScrapper.exe`.
