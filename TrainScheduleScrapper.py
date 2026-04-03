@@ -1,4 +1,5 @@
 import argparse
+import csv
 import json
 import os
 import sys
@@ -84,6 +85,8 @@ def isValidSchedule(scheduleJson):
 
 
 def saveScheduleToFile(scheduleJson, file, trainNumber, saveHeaders):
+    writer = csv.writer(file)
+
     if saveHeaders:
         keys = list(scheduleJson['stationList'][0].keys())
         keys = ['Train Number', 'Train Name', 'Serial number'] + keys + [
@@ -91,8 +94,7 @@ def saveScheduleToFile(scheduleJson, file, trainNumber, saveHeaders):
             'RunsOnMon', 'RunsOnTue', 'RunsOnWed', 'RunsOnThu', 'RunsOnFri', 'RunsOnSat', 'RunsOnSun'
         ]
 
-        s = ','.join(keys)
-        file.write(s + '\n')
+        writer.writerow(keys)
 
     for idx, st in enumerate(scheduleJson['stationList']):
         vals = list(st.values())
@@ -111,8 +113,7 @@ def saveScheduleToFile(scheduleJson, file, trainNumber, saveHeaders):
             scheduleJson['trainRunsOnSun']
         ]
 
-        s = ','.join(str(val) for val in vals)
-        file.write(s + '\n')
+        writer.writerow(vals)
 
 
 def getTrainSchedule(scheduleJson, serialNumber):
@@ -158,6 +159,9 @@ def getInputs(start=None, end=None, inputFunc=input):
 
 
 def fetchSchedules(start, end, file, statusStream=None, fetchScheduleFunc=None):
+    if end < start:
+        raise ValueError('End train number must be greater than or equal to start train number.')
+
     firstTrain = True
     elapsedBefore = 0
     startTime = datetime.now()
@@ -184,7 +188,7 @@ def fetchSchedules(start, end, file, statusStream=None, fetchScheduleFunc=None):
         elapsed = int((currentTime - startTime).total_seconds() / 60)
 
         if elapsed > elapsedBefore:
-            percentComplete = round((trainNumber - start) * 100 / (end - start), 1) if end != start else 100.0
+            percentComplete = round((trainNumber - start) * 100 / (end - start), 1) if end > start else 100.0
             writeStatus(statusStream, f'Train {trainNumber} done. {percentComplete}%     Elapsed : {elapsed} mins.')
             elapsedBefore = elapsed
 
