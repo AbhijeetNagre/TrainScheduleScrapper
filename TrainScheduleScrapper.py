@@ -215,7 +215,7 @@ def runScraper(start, end, outputFile=None, statusStream=None, fetchScheduleFunc
         return result
 
     filepath = getFilePath()
-    with open(filepath, "w+") as file:
+    with open(filepath, "w+", newline='', encoding='utf-8') as file:
         result = fetchSchedules(start, end, file, statusStream, fetchScheduleFunc)
 
     result['outputPath'] = filepath
