@@ -140,8 +140,10 @@ def getInputs():
     end = input("Enter end range (Default is 26200) : ")
 
     try:
-        start = int(11000 if not start.strip() else start)
-        end = int(26200 if not end.strip() else end)
+        start = start.strip() or '11000'
+        end = end.strip() or '26200'
+        start = int(start)
+        end = int(end)
     except ValueError:
         print('Start and end ranges must be whole numbers.')
         return None, None
@@ -176,7 +178,7 @@ def fetchSchedules(session, writer, start, end):
 
         stationList = scheduleJson.get('stationList')
 
-        if stationList == []:
+        if stationList is not None and len(stationList) == 0:
             skippedTrainCount += 1
             print(f'Train {trainNumber} returned an empty station list and was skipped.')
         elif stationList:
