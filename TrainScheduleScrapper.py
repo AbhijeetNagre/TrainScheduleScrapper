@@ -165,7 +165,7 @@ def fetchSchedules(session, writer, start, end):
 
     elapsedBefore = 0
     startTime = datetime.now()
-    totalRange = max(end - start + 1, 1)
+    totalRange = end - start + 1
 
     for trainNumber in range(start, end + 1):
         try:
@@ -207,7 +207,7 @@ def main():
         print(f'Unable to start an IRCTC session: {exc}')
         return 1
 
-    with open(filepath, "w+", newline='', encoding='utf-8') as file:
+    with open(filepath, "w", newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
         savedTrainCount, skippedTrainCount, failures = fetchSchedules(session, writer, start, end)
 
