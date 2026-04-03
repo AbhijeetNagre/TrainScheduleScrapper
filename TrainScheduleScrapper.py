@@ -35,7 +35,8 @@ API_HEADERS = {
 def createSession():
     session = r.Session()
     session.headers.update(BASE_HEADERS)
-    session.get(BOOKING_PAGE_URL, timeout=REQUEST_TIMEOUT_SECONDS, verify=False)
+    response = session.get(BOOKING_PAGE_URL, timeout=REQUEST_TIMEOUT_SECONDS, verify=False)
+    response.raise_for_status()
     return session
 
 
@@ -82,7 +83,9 @@ def getTrainScheduleJson(session, trainNumber):
 
 
 def saveScheduleToFile(scheduleJson, writer, trainNumber, saveHeaders):
-    stationList = scheduleJson['stationList']
+    stationList = scheduleJson.get('stationList')
+    if not stationList:
+        raise ValueError(f'Train {trainNumber} does not include station details.')
 
     if saveHeaders:
         keys = list(stationList[0].keys())
@@ -179,7 +182,7 @@ def fetchSchedules(session, writer, start, end):
             saveScheduleToFile(scheduleJson, writer, trainNumber, firstTrain)
             firstTrain = False
             savedTrainCount += 1
-        elif 'stationList' in scheduleJson:
+        elif scheduleJson.get('stationList') == []:
             skippedTrainCount += 1
             print(f'Train {trainNumber} returned an empty station list and was skipped.')
 
@@ -207,9 +210,14 @@ def main():
         print(f'Unable to start an IRCTC session: {exc}')
         return 1
 
-    with open(filepath, "w", newline='', encoding='utf-8') as file:
-        writer = csv.writer(file)
-        savedTrainCount, skippedTrainCount, failures = fetchSchedules(session, writer, start, end)
+    try:
+        with open(filepath, "w", newline='', encoding='utf-8') as file:
+            writer = csv.writer(file)
+            savedTrainCount, skippedTrainCount, failures = fetchSchedules(session, writer, start, end)
+    except Exception:
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        raise
 
     if savedTrainCount == 0:
         os.remove(filepath)
