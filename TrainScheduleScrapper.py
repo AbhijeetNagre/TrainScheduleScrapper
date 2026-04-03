@@ -51,10 +51,7 @@ def parseTrainScheduleResponse(response: Response, trainNumber):
     try:
         schedule = response.json()
     except ValueError as exc:
-        snippet = response.text.strip().replace('\n', ' ')[:200]
-        raise RuntimeError(
-            f'IRCTC returned a non-JSON response for train {trainNumber}: {snippet}'
-        ) from exc
+        raise RuntimeError(f'IRCTC returned a non-JSON response for train {trainNumber}.') from exc
 
     if not isinstance(schedule, dict):
         raise RuntimeError(f'IRCTC returned an unexpected payload for train {trainNumber}.')
@@ -158,7 +155,7 @@ def getInputs():
     return start, end
 
 
-def fetchSchedules(session, writer, start, end):
+def fetchSchedules(session, fileHandle, writer, start, end):
     firstTrain = True
     savedTrainCount = 0
     skippedTrainCount = 0
@@ -173,7 +170,7 @@ def fetchSchedules(session, writer, start, end):
             scheduleJson = getTrainScheduleJson(session, trainNumber)
         except RuntimeError as exc:
             failures.append(str(exc))
-            print(exc)
+            print(f'Error: {exc}')
             continue
 
         stationList = scheduleJson.get('stationList')
@@ -185,12 +182,13 @@ def fetchSchedules(session, writer, start, end):
             saveScheduleToFile(scheduleJson, writer, trainNumber, firstTrain)
             firstTrain = False
             savedTrainCount += 1
+            fileHandle.flush()
 
         currentTime = datetime.now()
         elapsed = int((currentTime - startTime).total_seconds() / 60)
 
         if elapsed > elapsedBefore:
-            percentComplete = round((trainNumber - start) * 100 / totalRange, 1)
+            percentComplete = round((trainNumber - start + 1) * 100 / totalRange, 1)
             print(f'Train {trainNumber} done. {percentComplete}%     Elapsed : {elapsed} mins.')
             elapsedBefore = elapsed
 
@@ -214,7 +212,7 @@ def main():
     try:
         with open(filepath, "w", newline='', encoding='utf-8') as file:
             writer = csv.writer(file)
-            savedTrainCount, skippedTrainCount, failures = fetchSchedules(session, writer, start, end)
+            savedTrainCount, skippedTrainCount, failures = fetchSchedules(session, file, writer, start, end)
     except (OSError, ValueError) as exc:
         if os.path.exists(filepath):
             os.remove(filepath)
