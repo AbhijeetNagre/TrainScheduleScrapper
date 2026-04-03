@@ -4,11 +4,8 @@ import os
 from datetime import datetime
 
 import requests as r
-import urllib3
 from requests import Response
 from requests.exceptions import RequestException
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 SCHEDULE_API_URL = 'https://www.irctc.co.in/eticketing/protected/mapps1/trnscheduleenquiry/'
 BOOKING_PAGE_URL = 'https://www.irctc.co.in/nget/booking/check-train-schedule'
@@ -35,7 +32,7 @@ API_HEADERS = {
 def createSession():
     session = r.Session()
     session.headers.update(BASE_HEADERS)
-    response = session.get(BOOKING_PAGE_URL, timeout=REQUEST_TIMEOUT_SECONDS, verify=False)
+    response = session.get(BOOKING_PAGE_URL, timeout=REQUEST_TIMEOUT_SECONDS)
     response.raise_for_status()
     return session
 
@@ -73,7 +70,6 @@ def getTrainScheduleJson(session, trainNumber):
             trainUrl,
             headers=API_HEADERS,
             timeout=REQUEST_TIMEOUT_SECONDS,
-            verify=False,
         )
         response.raise_for_status()
     except RequestException as exc:
@@ -178,11 +174,13 @@ def fetchSchedules(session, writer, start, end):
             print(exc)
             continue
 
-        if scheduleJson.get('stationList'):
+        stationList = scheduleJson.get('stationList')
+
+        if stationList:
             saveScheduleToFile(scheduleJson, writer, trainNumber, firstTrain)
             firstTrain = False
             savedTrainCount += 1
-        elif scheduleJson.get('stationList') == []:
+        elif stationList == []:
             skippedTrainCount += 1
             print(f'Train {trainNumber} returned an empty station list and was skipped.')
 
@@ -214,7 +212,7 @@ def main():
         with open(filepath, "w", newline='', encoding='utf-8') as file:
             writer = csv.writer(file)
             savedTrainCount, skippedTrainCount, failures = fetchSchedules(session, writer, start, end)
-    except Exception:
+    except (OSError, ValueError):
         if os.path.exists(filepath):
             os.remove(filepath)
         raise
