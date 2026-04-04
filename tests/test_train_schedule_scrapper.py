@@ -172,5 +172,32 @@ class TrainScheduleScrapperTests(unittest.TestCase):
         self.assertIn('Train 11001 valid.', status_text)
         self.assertIn('Completed. Valid trains: 1. Invalid trains: 0.', status_text)
 
+    def test_valid_range_reports_valid_train_07019_Without_fakes(self):
+        output = io.StringIO()
+        status = io.StringIO()
+
+        def fail_if_prompted(_message):
+            raise AssertionError('input() should not be called when args are provided')
+
+        result = scraper.main(
+            ['--start', '7019', '--end', '7019'],
+            outputFile=output,
+            statusStream=status,
+            fetchScheduleFunc=scraper.getTrainScheduleJson,
+            inputFunc=fail_if_prompted
+        )
+
+        self.assertEqual(result['validTrains'], [7019])
+        self.assertEqual(result['invalidTrains'], [])
+
+        output_text = output.getvalue()
+        self.assertIn('7019', output_text)
+
+        status_text = status.getvalue()
+        self.assertIn('Processing trains from 7019 to 7019.', status_text)
+        self.assertIn('Train 7019 valid.', status_text)
+        self.assertIn('Completed. Valid trains: 1. Invalid trains: 0.', status_text)
+
+
 if __name__ == '__main__':
     unittest.main()

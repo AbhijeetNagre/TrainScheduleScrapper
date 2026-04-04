@@ -73,7 +73,7 @@ def getFilePath():
 
 
 def getTrainScheduleJson(trainNumber):
-    trainUrl = url + str(trainNumber)
+    trainUrl = url + str(trainNumber).zfill(5)
     t = r.get(trainUrl, verify=False, headers=headrs, cookies=cooky)
     schedule = json.loads(t.text)
 
